@@ -64,6 +64,22 @@ const formSchema = new mongoose.Schema(
     },
     fields: [formFieldSchema],
     settings: {
+      hasBanner: {
+        type: Boolean,
+        default: false,
+      },
+      headerImage: {
+        type: String,
+        default: '',
+      },
+      bannerImage: {
+        type: String,
+        default: '',
+      },
+      themeColor: {
+        type: String,
+        default: 'blue',
+      },
       allowMultipleResponses: {
         type: Boolean,
         default: false,

@@ -79,6 +79,21 @@ const getFormResponses = async (req, res, next) => {
   }
 };
 
+const getAllFormResponses = async (req, res, next) => {
+  try {
+    const formId = req.query.formId || 'all';
+    const result = await formService.getFormResponses(formId, req.query);
+    res.status(200).json({
+      success: true,
+      message: 'Form responses fetched successfully',
+      data: result.responses,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteFormResponse = async (req, res, next) => {
   try {
     await formService.deleteFormResponse(req.params.id);
@@ -98,5 +113,6 @@ module.exports = {
   updateForm,
   deleteForm,
   getFormResponses,
+  getAllFormResponses,
   deleteFormResponse,
 };

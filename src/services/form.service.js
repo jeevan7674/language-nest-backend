@@ -86,10 +86,13 @@ const deleteForm = async (id) => {
 
 const getFormResponses = async (formId, query) => {
   const { page, limit, skip } = getPagination(query);
-  const filter = { form: formId };
+  const filter = {};
+  if (formId && formId !== 'all') {
+    filter.form = formId;
+  }
 
   const [responses, total] = await Promise.all([
-    FormResponse.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit),
+    FormResponse.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit).populate('form', 'title name description slug'),
     FormResponse.countDocuments(filter),
   ]);
 
