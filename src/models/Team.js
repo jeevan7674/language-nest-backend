@@ -46,6 +46,29 @@ const teamMemberSubSchema = new mongoose.Schema(
   }
 );
 
+const facultySubSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Faculty name is required'],
+      trim: true,
+    },
+    role: {
+      type: String,
+      required: [true, 'Faculty role is required'],
+      trim: true,
+      default: 'Faculty Advisor',
+    },
+    image: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
 const teamSchema = new mongoose.Schema(
   {
     year: {
@@ -59,6 +82,7 @@ const teamSchema = new mongoose.Schema(
       default: false,
     },
     members: [teamMemberSubSchema],
+    faculty: [facultySubSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',

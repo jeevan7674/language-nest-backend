@@ -106,6 +106,19 @@ const deleteFormResponse = async (req, res, next) => {
   }
 };
 
+const submitFormResponse = async (req, res, next) => {
+  try {
+    const response = await formService.submitFormResponse(req.params.id, req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Form response submitted successfully',
+      data: response,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getForms,
   getFormById,
@@ -115,4 +128,5 @@ module.exports = {
   getFormResponses,
   getAllFormResponses,
   deleteFormResponse,
+  submitFormResponse,
 };

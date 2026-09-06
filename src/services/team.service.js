@@ -45,6 +45,7 @@ const createTeam = async (data, creatorId) => {
     year: data.year.trim(),
     isAlumni: Boolean(data.isAlumni),
     members: data.members || [],
+    faculty: data.faculty || [],
     createdBy: creatorId,
   });
 
@@ -72,6 +73,7 @@ const updateTeam = async (id, data, updaterId) => {
 
   if (data.isAlumni !== undefined) team.isAlumni = Boolean(data.isAlumni);
   if (data.members !== undefined) team.members = data.members;
+  if (data.faculty !== undefined) team.faculty = data.faculty;
 
   team.updatedBy = updaterId;
   await team.save();
@@ -88,11 +90,19 @@ const deleteTeam = async (id) => {
     throw error;
   }
 
-  // Cleanup all member avatars in this team from Cloudinary
+  // Cleanup all member avatars and faculty images in this team from Cloudinary
   if (Array.isArray(team.members)) {
     for (const member of team.members) {
       if (member.avatar) {
         deleteFromCloudinary(member.avatar).catch(() => {});
+      }
+    }
+  }
+
+  if (Array.isArray(team.faculty)) {
+    for (const f of team.faculty) {
+      if (f.image) {
+        deleteFromCloudinary(f.image).catch(() => {});
       }
     }
   }

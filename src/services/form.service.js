@@ -27,8 +27,13 @@ const getForms = async (query) => {
   };
 };
 
-const getFormById = async (id) => {
-  const form = await Form.findById(id).populate('createdBy', 'name email');
+const mongoose = require('mongoose');
+
+const getFormById = async (idOrSlug) => {
+  const isMongoId = mongoose.Types.ObjectId.isValid(idOrSlug);
+  const form = isMongoId
+    ? await Form.findById(idOrSlug).populate('createdBy', 'name email')
+    : await Form.findOne({ slug: idOrSlug }).populate('createdBy', 'name email');
   if (!form) {
     const error = new Error('Form not found');
     error.statusCode = 404;
@@ -113,6 +118,34 @@ const deleteFormResponse = async (responseId) => {
   return response;
 };
 
+const submitFormResponse = async (formIdOrSlug, data) => {
+  const isMongoId = mongoose.Types.ObjectId.isValid(formIdOrSlug);
+  const form = isMongoId
+    ? await Form.findById(formIdOrSlug)
+    : await Form.findOne({ slug: formIdOrSlug });
+
+  if (!form) {
+    const error = new Error('Form not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const answers = data.answers || data;
+  const respondentEmail = data.email || data.respondentEmail || (answers && (answers.email || answers.Email || answers['College Email'] || answers['Email Address']));
+  const respondentName = data.name || data.respondentName || (answers && (answers.name || answers.Name || answers['Full Name']));
+
+  const response = new FormResponse({
+    form: form._id,
+    answers,
+    respondentEmail: respondentEmail || null,
+    respondentName: respondentName || null,
+  });
+
+  await response.save();
+  await Form.findByIdAndUpdate(form._id, { $inc: { responseCount: 1 } });
+  return response;
+};
+
 module.exports = {
   getForms,
   getFormById,
@@ -121,4 +154,5 @@ module.exports = {
   deleteForm,
   getFormResponses,
   deleteFormResponse,
+  submitFormResponse,
 };

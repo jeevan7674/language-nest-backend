@@ -21,6 +21,11 @@ const eventSchema = new mongoose.Schema(
       enum: ['Conversation', 'Cultural', 'Workshop', 'Other'],
       default: 'Conversation',
     },
+    tagline: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     description: {
       type: String,
       trim: true,
@@ -63,6 +68,47 @@ const eventSchema = new mongoose.Schema(
     registrationForm: {
       type: String,
       default: null,
+    },
+    prize: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    accessFee: {
+      type: String,
+      trim: true,
+      default: 'Free for members',
+    },
+    organizer: {
+      type: String,
+      trim: true,
+      default: 'Language Nest Club',
+    },
+    schedule: [
+      {
+        time: { type: String, trim: true },
+        title: { type: String, trim: true },
+        description: { type: String, trim: true, default: '' },
+      },
+    ],
+    agenda: [
+      {
+        time: { type: String, trim: true },
+        title: { type: String, trim: true },
+        description: { type: String, trim: true, default: '' },
+      },
+    ],
+    guidelines: [{ type: String, trim: true }],
+    rules: [{ type: String, trim: true }],
+    winner: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    winners: {
+      first: { type: String, trim: true, default: null },
+      second: { type: String, trim: true, default: null },
+      third: { type: String, trim: true, default: null },
     },
     featured: {
       type: Boolean,

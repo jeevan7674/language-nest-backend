@@ -16,10 +16,15 @@ const resourceRoutes = require('./admin/resource.routes');
 const galleryRoutes = require('./admin/gallery.routes');
 const newsRoutes = require('./admin/news.routes');
 const storyRoutes = require('./admin/story.routes');
+const facultyRoutes = require('./admin/faculty.routes');
 const uploadRoutes = require('./upload.routes');
+const publicRoutes = require('./public.routes');
 
 // Public health check
 router.use('/health', healthRoutes);
+
+// Public website routes (/api/v1/events, /api/v1/team, /api/v1/workshops, etc.)
+router.use('/', publicRoutes);
 
 // Auth routes (/api/v1/auth/*)
 router.use('/auth', authRoutes);
@@ -35,6 +40,7 @@ router.use('/admin/events', eventRoutes);
 router.use('/admin/workshops', workshopRoutes);
 router.use('/admin/members', memberRoutes);
 router.use('/admin/team', teamRoutes);
+router.use('/admin/faculty', facultyRoutes);
 router.use('/admin/announcements', announcementRoutes);
 router.use('/admin/finance', financeRoutes);
 router.use('/admin/forms', formRoutes);

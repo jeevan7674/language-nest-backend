@@ -65,10 +65,24 @@ const deleteEvent = async (req, res, next) => {
   }
 };
 
+const registerForEvent = async (req, res, next) => {
+  try {
+    const event = await eventService.registerForEvent(req.params.id, req.body);
+    res.status(200).json({
+      success: true,
+      message: 'Registered for event successfully',
+      data: event,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getEvents,
   getEventById,
   createEvent,
   updateEvent,
   deleteEvent,
+  registerForEvent,
 };
