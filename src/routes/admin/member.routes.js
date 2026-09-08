@@ -9,6 +9,12 @@ const { validateMember, validateUpdateMember } = require('../../validators/membe
 // Members require Member Admin or Super Admin
 router.use(authenticate, authorize('Member Admin', 'Super Admin', 'super_admin', 'admin'));
 
+// Metrics & Settings routes (must precede /:id)
+router.get('/metrics', memberController.getMemberMetrics);
+router.get('/settings', memberController.getAdminPaymentSettings);
+router.put('/settings', memberController.updateAdminPaymentSettings);
+
+// Member CRUD routes
 router.get('/', memberController.getMembers);
 router.post('/', validate(validateMember), memberController.createMember);
 router.get('/:id', memberController.getMemberById);

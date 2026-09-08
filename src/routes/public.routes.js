@@ -8,6 +8,9 @@ const workshopController = require('../controllers/workshop.controller');
 const announcementController = require('../controllers/announcement.controller');
 const formController = require('../controllers/form.controller');
 const contentController = require('../controllers/content.controller');
+const memberController = require('../controllers/member.controller');
+const { validate } = require('../middleware/validation.middleware');
+const { validatePublicRegistration } = require('../validators/member.validator');
 
 // Public Events
 router.get('/events', eventController.getEvents);
@@ -30,6 +33,11 @@ router.get('/announcements', announcementController.getAnnouncements);
 // Public Custom Forms
 router.get('/forms/:id', formController.getFormById);
 router.post('/forms/:id/submit', formController.submitFormResponse);
+
+// Public Membership Joining & Payment Settings & Live Heartbeat
+router.get('/membership/settings', memberController.getPublicPaymentSettings);
+router.post('/membership/register', validate(validatePublicRegistration), memberController.registerPublicMember);
+router.post('/membership/heartbeat', memberController.postHeartbeat);
 
 // Public Content (Gallery, News, Stories, Resources)
 router.get('/gallery', contentController.getGalleries);

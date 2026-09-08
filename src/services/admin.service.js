@@ -39,6 +39,17 @@ const getAdminById = async (id) => {
   return admin;
 };
 
+const { sendAdminWelcomeEmail } = require('./email.service');
+
+const generateRandomPassword = () => {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$';
+  let pwd = 'Nest@';
+  for (let i = 0; i < 6; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+};
+
 const createAdmin = async (data, creatorId) => {
   const existing = await Admin.findOne({ email: data.email.toLowerCase().trim() });
   if (existing) {
@@ -47,18 +58,36 @@ const createAdmin = async (data, creatorId) => {
     throw error;
   }
 
+  const rawPassword = data.password && data.password.trim().length >= 6
+    ? data.password.trim()
+    : generateRandomPassword();
+
+  const assignedRoles = Array.isArray(data.roles) && data.roles.length > 0
+    ? data.roles
+    : [data.role || 'Event Admin'];
+
   const admin = new Admin({
     name: data.name.trim(),
     email: data.email.toLowerCase().trim(),
-    password: data.password || 'Admin@123456', // Default temporary password if none provided
-    roles: Array.isArray(data.roles) ? data.roles : [data.role || 'Event Admin'],
+    password: rawPassword,
+    roles: assignedRoles,
     status: data.status || 'active',
-    image: data.image || null,
+    image: data.image || data.avatar || null,
     createdBy: creatorId || null,
   });
 
   await admin.save();
-  return admin;
+
+  // Send onboarding email with access credentials
+  sendAdminWelcomeEmail(admin.email, rawPassword, admin.name, admin.roles).catch((err) => {
+    console.error('Failed to send admin onboarding email:', err.message);
+  });
+
+  const responseObj = admin.toObject();
+  delete responseObj.password;
+  responseObj.temporaryPassword = rawPassword;
+
+  return responseObj;
 };
 
 const { deleteFromCloudinary } = require('./upload.service');

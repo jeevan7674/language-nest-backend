@@ -2,6 +2,13 @@ const mongoose = require('mongoose');
 
 const memberSchema = new mongoose.Schema(
   {
+    memberId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Member name is required'],
@@ -22,11 +29,11 @@ const memberSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
-      default: '',
+      required: [true, 'Phone number is required'],
     },
     department: {
       type: String,
-      required: [true, 'Department is required'],
+      required: [true, 'Department / Branch is required'],
       trim: true,
     },
     year: {
@@ -44,17 +51,56 @@ const memberSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    membershipStatus: {
+      type: String,
+      enum: ['REGISTERED', 'VERIFIED', 'ACTIVE', 'REJECTED', 'active', 'inactive'],
+      default: 'REGISTERED',
+      index: true,
+    },
     paymentMode: {
       type: String,
-      enum: ['online', 'offline'],
-      default: 'online',
+      enum: ['QR', 'OFFLINE', 'online', 'offline', 'upi', 'cash'],
+      default: 'QR',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['RECORDED', 'PENDING', 'VERIFIED', 'REJECTED', 'paid', 'unpaid'],
+      default: 'RECORDED',
+      index: true,
+    },
+    utrNumber: {
+      type: String,
+      trim: true,
+      default: null,
     },
     transactionId: {
       type: String,
       trim: true,
       default: null,
     },
+    cashGivenTo: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    termsAccepted: {
+      type: Boolean,
+      default: true,
+    },
+    termsAcceptedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    registeredAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
     image: {
+      type: String,
+      default: null,
+    },
+    avatar: {
       type: String,
       default: null,
     },
@@ -74,7 +120,7 @@ const memberSchema = new mongoose.Schema(
   }
 );
 
-memberSchema.index({ name: 'text', email: 'text', department: 'text' });
+memberSchema.index({ memberId: 'text', name: 'text', email: 'text', department: 'text', phone: 'text' });
 
 const Member = mongoose.model('Member', memberSchema);
 

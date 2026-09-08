@@ -1,5 +1,100 @@
 const memberService = require('../services/member.service');
 
+// Public Member Registration
+const registerPublicMember = async (req, res, next) => {
+  try {
+    const reqInfo = {
+      ip: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent'] || '',
+    };
+    const result = await memberService.registerPublicMember(req.body, reqInfo);
+    res.status(201).json({
+      success: true,
+      message: 'Membership registration submitted successfully',
+      data: {
+        member: result.member,
+        whatsappGroupUrl: result.whatsappGroupUrl,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public Get Payment & WhatsApp Settings
+const getPublicPaymentSettings = async (req, res, next) => {
+  try {
+    const settings = await memberService.getPaymentSettings();
+    res.status(200).json({
+      success: true,
+      message: 'Payment configuration fetched successfully',
+      data: settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public Live Presence Heartbeat
+const postHeartbeat = async (req, res, next) => {
+  try {
+    const { sessionId } = req.body;
+    const reqInfo = {
+      ip: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent'] || '',
+    };
+    await memberService.recordHeartbeat(sessionId, reqInfo);
+    res.status(200).json({
+      success: true,
+      message: 'Heartbeat recorded',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Get Member Metrics (Total, Today, Live)
+const getMemberMetrics = async (req, res, next) => {
+  try {
+    const metrics = await memberService.getMemberMetrics();
+    res.status(200).json({
+      success: true,
+      message: 'Member metrics fetched successfully',
+      data: metrics,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Get Payment Settings
+const getAdminPaymentSettings = async (req, res, next) => {
+  try {
+    const settings = await memberService.getPaymentSettings();
+    res.status(200).json({
+      success: true,
+      message: 'Payment settings fetched successfully',
+      data: settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Update Payment Settings
+const updateAdminPaymentSettings = async (req, res, next) => {
+  try {
+    const settings = await memberService.updatePaymentSettings(req.body, req.admin._id);
+    res.status(200).json({
+      success: true,
+      message: 'Payment settings updated successfully',
+      data: settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getMembers = async (req, res, next) => {
   try {
     const result = await memberService.getMembers(req.query);
@@ -66,6 +161,12 @@ const deleteMember = async (req, res, next) => {
 };
 
 module.exports = {
+  registerPublicMember,
+  getPublicPaymentSettings,
+  postHeartbeat,
+  getMemberMetrics,
+  getAdminPaymentSettings,
+  updateAdminPaymentSettings,
   getMembers,
   getMemberById,
   createMember,
