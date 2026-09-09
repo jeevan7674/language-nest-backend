@@ -16,6 +16,12 @@ const generateOtp = () => {
  * @returns {Promise<{ requireOtp: boolean, email: string, message: string }>}
  */
 const login = async (email, password) => {
+  if (!email || !password) {
+    const error = new Error('Both email and password are required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const admin = await Admin.findOne({ email: email.toLowerCase().trim() }).select('+password');
   if (!admin) {
     const error = new Error('Invalid email or password');
@@ -31,15 +37,16 @@ const login = async (email, password) => {
   }
 
   if (admin.status !== 'active') {
-    const error = new Error('Your account is deactivated. Please contact an administrator.');
+    const error = new Error('Your account is deactivated. Please contact a Super Administrator.');
     error.statusCode = 403;
     throw error;
   }
 
-  // Generate 6-digit OTP with 10-minute expiration
+  // Generate 6-digit OTP with 10-minute expiration & reset attempt counter
   const otp = generateOtp();
   admin.loginOtp = otp;
   admin.loginOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  admin.loginOtpAttempts = 0;
   await admin.save();
 
   // Send OTP email
@@ -65,8 +72,15 @@ const verifyOtp = async (email, otp) => {
     throw error;
   }
 
+  const cleanOtp = String(otp).trim();
+  if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+    const error = new Error('Verification code must be exactly 6 numeric digits');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const admin = await Admin.findOne({ email: email.toLowerCase().trim() })
-    .select('+loginOtp +loginOtpExpiresAt');
+    .select('+loginOtp +loginOtpExpiresAt +loginOtpAttempts');
 
   if (!admin) {
     const error = new Error('Account not found');
@@ -74,20 +88,42 @@ const verifyOtp = async (email, otp) => {
     throw error;
   }
 
+  if (admin.status !== 'active') {
+    const error = new Error('Account is deactivated. Access denied.');
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (!admin.loginOtp || !admin.loginOtpExpiresAt) {
-    const error = new Error('No verification code requested. Please sign in again.');
+    const error = new Error('No verification code active. Please sign in with your password again.');
     error.statusCode = 400;
     throw error;
   }
 
   if (new Date() > admin.loginOtpExpiresAt) {
+    admin.loginOtp = null;
+    admin.loginOtpExpiresAt = null;
+    admin.loginOtpAttempts = 0;
+    await admin.save();
     const error = new Error('Verification code has expired. Please request a new code.');
     error.statusCode = 400;
     throw error;
   }
 
-  if (admin.loginOtp !== otp.trim()) {
-    const error = new Error('Invalid verification code. Please check your email and try again.');
+  if (admin.loginOtp !== cleanOtp) {
+    admin.loginOtpAttempts = (admin.loginOtpAttempts || 0) + 1;
+    if (admin.loginOtpAttempts >= 5) {
+      admin.loginOtp = null;
+      admin.loginOtpExpiresAt = null;
+      admin.loginOtpAttempts = 0;
+      await admin.save();
+      const error = new Error('Too many invalid attempts. Your verification code has been invalidated. Please sign in again.');
+      error.statusCode = 400;
+      throw error;
+    }
+    await admin.save();
+    const remaining = 5 - admin.loginOtpAttempts;
+    const error = new Error(`Invalid verification code. (${remaining} attempt${remaining === 1 ? '' : 's'} remaining)`);
     error.statusCode = 400;
     throw error;
   }
@@ -95,6 +131,7 @@ const verifyOtp = async (email, otp) => {
   // Clear OTP on successful verification
   admin.loginOtp = null;
   admin.loginOtpExpiresAt = null;
+  admin.loginOtpAttempts = 0;
   admin.lastLogin = new Date();
   admin.lastActive = new Date();
   await admin.save();

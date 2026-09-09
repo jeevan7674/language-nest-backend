@@ -3,14 +3,29 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const parseAllowedOrigins = () => {
-  const origins = [];
+  const defaultOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:8080',
+    'http://localhost:8081',
+    'https://language-nest-nu.vercel.app',
+    'https://language-nest-pilot.vercel.app',
+  ];
+
+  const customOrigins = [];
   if (process.env.CLIENT_URL) {
-    origins.push(...process.env.CLIENT_URL.split(',').map(url => url.trim()));
+    customOrigins.push(...process.env.CLIENT_URL.split(',').map(url => url.trim().replace(/\/+$/, '')));
   }
   if (process.env.ADMIN_URL) {
-    origins.push(...process.env.ADMIN_URL.split(',').map(url => url.trim()));
+    customOrigins.push(...process.env.ADMIN_URL.split(',').map(url => url.trim().replace(/\/+$/, '')));
   }
-  return origins.filter(Boolean);
+  if (process.env.ALLOWED_ORIGINS) {
+    customOrigins.push(...process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim().replace(/\/+$/, '')));
+  }
+
+  // Deduplicate and filter non-empty
+  const combined = Array.from(new Set([...defaultOrigins, ...customOrigins])).filter(Boolean);
+  return combined;
 };
 
 const env = {

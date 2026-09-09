@@ -7,12 +7,31 @@ if (env.RESEND_API_KEY) {
 }
 
 /**
+ * Check if an email address is a synthetic test address (RFC 2606)
+ */
+const isTestEmail = (email) => {
+  if (!email) return false;
+  const lower = email.toLowerCase().trim();
+  return (
+    lower.endsWith('@example.com') ||
+    lower.endsWith('@test.com') ||
+    lower.startsWith('test.') ||
+    lower.includes('test.qr') ||
+    lower.includes('test.offline')
+  );
+};
+
+/**
  * Send an OTP verification code via Resend email with development console fallback.
  * @param {string} to - Recipient email address
  * @param {string} otp - 6-digit verification code
  * @param {string} name - Recipient name
  */
 const sendLoginOtpEmail = async (to, otp, name = 'Admin') => {
+  if (isTestEmail(to)) {
+    console.log(`ℹ️ [Email Service] Skipping dispatch for synthetic test email: ${to}`);
+    return { success: true, testSimulated: true };
+  }
   const subject = `Your Language Nest Verification Code: ${otp}`;
   const htmlContent = `
     <!DOCTYPE html>
@@ -90,6 +109,10 @@ const sendLoginOtpEmail = async (to, otp, name = 'Admin') => {
  */
 const sendMemberWelcomeEmail = async (member, whatsappGroupUrl = '') => {
   const to = member.email;
+  if (isTestEmail(to)) {
+    console.log(`ℹ️ [Email Service] Skipping member welcome email dispatch for synthetic test address: ${to}`);
+    return { success: true, testSimulated: true };
+  }
   const name = member.name;
   const memberId = member.memberId || 'GLN-MEMBER';
   const branch = member.department || 'All Departments';
@@ -225,6 +248,10 @@ const sendMemberWelcomeEmail = async (member, whatsappGroupUrl = '') => {
  * @param {Array<string>} roles - Assigned admin roles
  */
 const sendAdminWelcomeEmail = async (to, rawPassword, name = 'Admin', roles = ['Event Admin']) => {
+  if (isTestEmail(to)) {
+    console.log(`ℹ️ [Email Service] Skipping admin welcome email dispatch for synthetic test address: ${to}`);
+    return { success: true, testSimulated: true };
+  }
   const subject = `Welcome to the Language Nest Admin Team! 🛡️ (Your Access Credentials)`;
   const loginUrl = `${env.CORS_ORIGIN || 'http://localhost:5173'}/login`;
   const rolesText = Array.isArray(roles) ? roles.join(', ') : roles;

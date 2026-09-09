@@ -254,6 +254,10 @@ async function runTests() {
     assert(verifyPublicSettingsData.data?.upiId === newUpiId, 'Public endpoint serves updated UPI ID');
     assert(verifyPublicSettingsData.data?.whatsappGroupUrl === newWhatsApp, 'Public endpoint serves updated WhatsApp URL');
 
+    // Automatic post-test cleanup to leave production database 100% clean
+    await Member.deleteMany({ email: { $regex: /@example\.com|test\.qr|test\.offline/i } });
+    await RegistrationSession.deleteMany({ sessionId: { $regex: /sess_test/i } });
+
     console.log('\n========================================================');
     console.log(`📊 TEST SUMMARY: Passed: ${passed} | Failed: ${failed}`);
     console.log('========================================================\n');

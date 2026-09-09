@@ -57,6 +57,11 @@ const adminSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    loginOtpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
     lastLogin: {
       type: Date,
       default: null,
