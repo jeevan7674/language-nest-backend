@@ -89,15 +89,19 @@ const deleteForm = async (id) => {
   return form;
 };
 
-const getFormResponses = async (formId, query) => {
-  const { page, limit, skip } = getPagination(query);
+const getFormResponses = async (formId, query = {}) => {
+  const { page, limit, skip } = getPagination(query || {}, 200, 1000);
   const filter = {};
   if (formId && formId !== 'all') {
     filter.form = formId;
   }
 
   const [responses, total] = await Promise.all([
-    FormResponse.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit).populate('form', 'title name description slug'),
+    FormResponse.find(filter)
+      .sort({ submittedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('form', 'title name description slug'),
     FormResponse.countDocuments(filter),
   ]);
 
@@ -114,7 +118,10 @@ const deleteFormResponse = async (responseId) => {
     error.statusCode = 404;
     throw error;
   }
-  await Form.findByIdAndUpdate(response.form, { $inc: { responseCount: -1 } });
+  if (response.form) {
+    await Form.findByIdAndUpdate(response.form, { $inc: { responseCount: -1 } });
+    await Form.updateOne({ _id: response.form, responseCount: { $lt: 0 } }, { $set: { responseCount: 0 } });
+  }
   return response;
 };
 

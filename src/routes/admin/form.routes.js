@@ -6,8 +6,8 @@ const { authorize } = require('../../middleware/role.middleware');
 const { validate } = require('../../middleware/validation.middleware');
 const { validateForm } = require('../../validators/form.validator');
 
-// Form builder requires Super Admin or Event Admin / Workshop Admin
-router.use(authenticate, authorize('Super Admin', 'Event Admin', 'Workshop Admin', 'super_admin', 'admin'));
+// Form builder requires Super Admin, Form Admin, Event Admin, or Workshop Admin
+router.use(authenticate, authorize('Super Admin', 'Form Admin', 'form_admin', 'Event Admin', 'Workshop Admin', 'super_admin', 'admin'));
 
 // Form responses routes (defined before /:id)
 router.get('/responses/all', formController.getAllFormResponses);
