@@ -14,6 +14,9 @@ router.get('/metrics', memberController.getMemberMetrics);
 router.get('/settings', memberController.getAdminPaymentSettings);
 router.put('/settings', memberController.updateAdminPaymentSettings);
 
+// Export route (must precede /:id)
+router.get('/export', memberController.exportMembers);
+
 // Member CRUD routes
 router.get('/', memberController.getMembers);
 router.post('/', validate(validateMember), memberController.createMember);

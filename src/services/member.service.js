@@ -10,6 +10,7 @@ const DEFAULT_PAYMENT_SETTINGS = {
   upiId: 'gayaz508@ibl',
   upiPayeeName: 'Gayaz Language Nest',
   whatsappGroupUrl: 'https://chat.whatsapp.com/LanguageNest',
+  allowOfflinePayment: true,
 };
 
 /**
@@ -79,6 +80,7 @@ const getPaymentSettings = async () => {
     upiId: setting.value.upiId || DEFAULT_PAYMENT_SETTINGS.upiId,
     upiPayeeName: setting.value.upiPayeeName || DEFAULT_PAYMENT_SETTINGS.upiPayeeName,
     whatsappGroupUrl: setting.value.whatsappGroupUrl || DEFAULT_PAYMENT_SETTINGS.whatsappGroupUrl,
+    allowOfflinePayment: setting.value.allowOfflinePayment !== undefined ? Boolean(setting.value.allowOfflinePayment) : true,
   };
 };
 
@@ -88,20 +90,23 @@ const getPaymentSettings = async () => {
 const updatePaymentSettings = async (data, adminId) => {
   const current = await getPaymentSettings();
   const updatedValue = {
-    upiId: (data.upiId || current.upiId).trim(),
-    upiPayeeName: (data.upiPayeeName || current.upiPayeeName).trim(),
-    whatsappGroupUrl: (data.whatsappGroupUrl !== undefined ? data.whatsappGroupUrl : current.whatsappGroupUrl).trim(),
+    upiId: data.upiId !== undefined ? String(data.upiId).trim() : current.upiId,
+    upiPayeeName: data.upiPayeeName !== undefined ? String(data.upiPayeeName).trim() : current.upiPayeeName,
+    whatsappGroupUrl: data.whatsappGroupUrl !== undefined ? String(data.whatsappGroupUrl).trim() : current.whatsappGroupUrl,
+    allowOfflinePayment: data.allowOfflinePayment !== undefined ? Boolean(data.allowOfflinePayment) : current.allowOfflinePayment,
   };
 
   const setting = await Setting.findOneAndUpdate(
     { key: 'payment_settings' },
     {
-      key: 'payment_settings',
-      value: updatedValue,
-      description: 'Payment QR details and WhatsApp group invite link',
-      updatedBy: adminId,
+      $set: {
+        key: 'payment_settings',
+        value: updatedValue,
+        description: 'Payment QR details, WhatsApp group invite link, and offline registration settings',
+        updatedBy: adminId || null,
+      },
     },
-    { upsert: true, new: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
   return setting.value;
@@ -187,6 +192,12 @@ const registerPublicMember = async (data, reqInfo = {}) => {
       throw error;
     }
   } else if (paymentMode === 'OFFLINE' || paymentMode === 'CASH') {
+    const currentSettings = await getPaymentSettings();
+    if (currentSettings.allowOfflinePayment === false) {
+      const error = new Error('Offline cash registrations are currently disabled. Please pay using the QR code / UPI.');
+      error.statusCode = 400;
+      throw error;
+    }
     cashGivenTo = (data.cashGivenTo || '').trim();
     if (!cashGivenTo) {
       const error = new Error('Please specify the person to whom cash was given');
@@ -296,14 +307,14 @@ const getMemberMetrics = async () => {
 };
 
 /**
- * Get paginated members list for Admin
+/**
+ * Build unified MongoDB filter for Members (shared between table view and exports)
  */
-const getMembers = async (query) => {
-  const { page, limit, skip } = getPagination(query);
+const buildMemberFilter = (query = {}) => {
   const filter = {};
 
-  if (query.search) {
-    const searchRegex = new RegExp(query.search, 'i');
+  if (query.search && String(query.search).trim()) {
+    const searchRegex = new RegExp(String(query.search).trim(), 'i');
     filter.$or = [
       { memberId: searchRegex },
       { name: searchRegex },
@@ -332,6 +343,16 @@ const getMembers = async (query) => {
     filter.paymentMode = query.paymentMode;
   }
 
+  return filter;
+};
+
+/**
+ * Get paginated members list for Admin
+ */
+const getMembers = async (query) => {
+  const { page, limit, skip } = getPagination(query);
+  const filter = buildMemberFilter(query);
+
   const [members, total] = await Promise.all([
     Member.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('createdBy', 'name email'),
     Member.countDocuments(filter),
@@ -341,6 +362,18 @@ const getMembers = async (query) => {
     members,
     pagination: getPaginationMeta(total, page, limit),
   };
+};
+
+/**
+ * Get all filtered members for Export (Excel / PDF) without pagination limit
+ */
+const getMembersForExport = async (query = {}) => {
+  const filter = buildMemberFilter(query);
+  const members = await Member.find(filter)
+    .sort({ createdAt: -1 })
+    .populate('createdBy', 'name email')
+    .lean();
+  return members;
 };
 
 const getMemberById = async (id) => {
@@ -462,6 +495,8 @@ const deleteMember = async (id) => {
 
 module.exports = {
   getMembers,
+  getMembersForExport,
+  buildMemberFilter,
   getMemberById,
   createMember,
   updateMember,

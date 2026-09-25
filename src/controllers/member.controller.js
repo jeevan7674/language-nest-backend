@@ -1,4 +1,5 @@
 const memberService = require('../services/member.service');
+const exportService = require('../services/export.service');
 
 // Public Member Registration
 const registerPublicMember = async (req, res, next) => {
@@ -95,6 +96,53 @@ const updateAdminPaymentSettings = async (req, res, next) => {
   }
 };
 
+const exportMembers = async (req, res, next) => {
+  try {
+    const format = (req.query.format || 'xlsx').toLowerCase().trim();
+    if (format !== 'xlsx' && format !== 'pdf') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid export format. Supported formats are "xlsx" and "pdf".',
+      });
+    }
+
+    const members = await memberService.getMembersForExport(req.query);
+    if (!members || members.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No members found for the selected filters.',
+      });
+    }
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const filename = `language-nest-members-${dateStr}.${format}`;
+
+    const adminMeta = {
+      generatedBy: req.admin?.name || req.admin?.email || 'Administrator',
+    };
+
+    if (format === 'xlsx') {
+      const buffer = await exportService.generateMembersExcel(members, req.query, adminMeta);
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      return res.status(200).send(buffer);
+    } else {
+      const buffer = await exportService.generateMembersPdf(members, req.query, adminMeta);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      return res.status(200).send(buffer);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getMembers = async (req, res, next) => {
   try {
     const result = await memberService.getMembers(req.query);
@@ -168,6 +216,7 @@ module.exports = {
   getAdminPaymentSettings,
   updateAdminPaymentSettings,
   getMembers,
+  exportMembers,
   getMemberById,
   createMember,
   updateMember,

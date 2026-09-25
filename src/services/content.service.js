@@ -78,14 +78,21 @@ const getGalleries = async (query) => {
   if (query.status && query.status !== 'all') filter.status = query.status;
 
   const [galleries, total] = await Promise.all([
-    GalleryAlbum.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('createdBy', 'name email'),
+    GalleryAlbum.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('createdBy', 'name email')
+      .populate('event', 'title date'),
     GalleryAlbum.countDocuments(filter),
   ]);
   return { galleries, pagination: getPaginationMeta(total, page, limit) };
 };
 
 const getGalleryById = async (id) => {
-  const gallery = await GalleryAlbum.findById(id).populate('createdBy', 'name email');
+  const gallery = await GalleryAlbum.findById(id)
+    .populate('createdBy', 'name email')
+    .populate('event', 'title date');
   if (!gallery) {
     const error = new Error('Gallery album not found');
     error.statusCode = 404;
