@@ -41,6 +41,11 @@ const memberSchema = new mongoose.Schema(
       required: [true, 'Year is required'],
       trim: true,
     },
+    rollNumber: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     joinedDate: {
       type: String,
       default: () => new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),

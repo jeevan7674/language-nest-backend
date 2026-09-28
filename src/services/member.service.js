@@ -11,6 +11,7 @@ const DEFAULT_PAYMENT_SETTINGS = {
   upiPayeeName: 'Gayaz Language Nest',
   whatsappGroupUrl: 'https://chat.whatsapp.com/LanguageNest',
   allowOfflinePayment: true,
+  membershipFee: 100,
 };
 
 /**
@@ -81,6 +82,7 @@ const getPaymentSettings = async () => {
     upiPayeeName: setting.value.upiPayeeName || DEFAULT_PAYMENT_SETTINGS.upiPayeeName,
     whatsappGroupUrl: setting.value.whatsappGroupUrl || DEFAULT_PAYMENT_SETTINGS.whatsappGroupUrl,
     allowOfflinePayment: setting.value.allowOfflinePayment !== undefined ? Boolean(setting.value.allowOfflinePayment) : true,
+    membershipFee: setting.value.membershipFee !== undefined ? Number(setting.value.membershipFee) : DEFAULT_PAYMENT_SETTINGS.membershipFee,
   };
 };
 
@@ -94,6 +96,7 @@ const updatePaymentSettings = async (data, adminId) => {
     upiPayeeName: data.upiPayeeName !== undefined ? String(data.upiPayeeName).trim() : current.upiPayeeName,
     whatsappGroupUrl: data.whatsappGroupUrl !== undefined ? String(data.whatsappGroupUrl).trim() : current.whatsappGroupUrl,
     allowOfflinePayment: data.allowOfflinePayment !== undefined ? Boolean(data.allowOfflinePayment) : current.allowOfflinePayment,
+    membershipFee: data.membershipFee !== undefined ? Number(data.membershipFee) : current.membershipFee,
   };
 
   const setting = await Setting.findOneAndUpdate(
@@ -228,6 +231,24 @@ const registerPublicMember = async (data, reqInfo = {}) => {
     }
   }
 
+  // Duplicate Check for Transaction ID / UTR Number across online QR payments
+  if (utrNumber) {
+    const existingUtr = await Member.findOne({
+      $or: [
+        { utrNumber: { $regex: new RegExp(`^${utrNumber}$`, 'i') } },
+        { transactionId: { $regex: new RegExp(`^${utrNumber}$`, 'i') } },
+      ],
+    });
+
+    if (existingUtr) {
+      const error = new Error('This Transaction ID / UTR number has already been used for another registration');
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
+  const rollNumber = (data.rollNumber || data.usn || '').trim();
+
   // Generate Member ID
   const memberId = await generateNextMemberId();
   const normalizedPaymentMode = (paymentMode === 'QR' || paymentMode === 'ONLINE' || paymentMode === 'UPI') ? 'QR' : 'OFFLINE';
@@ -239,6 +260,7 @@ const registerPublicMember = async (data, reqInfo = {}) => {
     phone,
     department,
     year,
+    rollNumber: rollNumber || null,
     paymentMode: normalizedPaymentMode,
     utrNumber: utrNumber || null,
     transactionId: utrNumber || null,
@@ -399,6 +421,21 @@ const createMember = async (data, creatorId) => {
   const paymentMode = (data.paymentMode || 'online').toUpperCase();
   const normalizedPaymentMode = paymentMode === 'ONLINE' || paymentMode === 'QR' || paymentMode === 'UPI' ? 'QR' : 'OFFLINE';
 
+  const utr = (data.utrNumber || data.transactionId || '').trim();
+  if (utr) {
+    const existingUtr = await Member.findOne({
+      $or: [
+        { utrNumber: { $regex: new RegExp(`^${utr}$`, 'i') } },
+        { transactionId: { $regex: new RegExp(`^${utr}$`, 'i') } },
+      ],
+    });
+    if (existingUtr) {
+      const error = new Error('A member with this UTR / Transaction ID already exists');
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
   const member = new Member({
     ...data,
     memberId,
@@ -450,6 +487,22 @@ const updateMember = async (id, data, updaterId) => {
       throw error;
     }
     member.email = data.email.toLowerCase().trim();
+  }
+
+  const newUtr = data.utrNumber !== undefined ? (data.utrNumber || '').trim() : data.transactionId !== undefined ? (data.transactionId || '').trim() : null;
+  if (newUtr) {
+    const existingUtr = await Member.findOne({
+      $or: [
+        { utrNumber: { $regex: new RegExp(`^${newUtr}$`, 'i') } },
+        { transactionId: { $regex: new RegExp(`^${newUtr}$`, 'i') } },
+      ],
+      _id: { $ne: id },
+    });
+    if (existingUtr) {
+      const error = new Error('Another member with this UTR / Transaction ID already exists');
+      error.statusCode = 409;
+      throw error;
+    }
   }
 
   if (data.name) member.name = data.name.trim();

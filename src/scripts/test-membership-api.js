@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const env = require('../config/env');
 const Admin = require('../models/Admin');
 const Member = require('../models/Member');
+const RegistrationSession = require('../models/RegistrationSession');
 
 const BASE_URL = 'http://localhost:5000/api/v1';
 
@@ -119,6 +120,23 @@ async function runTests() {
       }),
     });
     assert(dupRes.status === 409, 'Duplicate email registration rejected with 409 Conflict');
+
+    // Duplicate UTR number
+    const dupUtrRes = await fetch(`${BASE_URL}/membership/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: 'Duplicate UTR User',
+        email: `duputr.${qrSuffix}@college.edu`,
+        phone: `+9191112${qrSuffix}`,
+        branch: 'Civil',
+        year: '1st Year',
+        paymentMode: 'QR',
+        utrNumber: `UTR_${qrSuffix}_LIVE`,
+        termsAccepted: true,
+      }),
+    });
+    assert(dupUtrRes.status === 409, 'Duplicate UTR number registration rejected with 409 Conflict');
 
     // Missing UTR for QR
     const noUtrRes = await fetch(`${BASE_URL}/membership/register`, {
