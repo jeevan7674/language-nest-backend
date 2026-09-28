@@ -53,6 +53,24 @@ const updateTransaction = async (req, res, next) => {
   }
 };
 
+const updateTransactionStatus = async (req, res, next) => {
+  try {
+    const { status, rejectionReason } = req.body;
+    const transaction = await financeService.updateTransactionStatus(
+      req.params.id,
+      { status, rejectionReason },
+      req.admin._id
+    );
+    res.status(200).json({
+      success: true,
+      message: `Transaction ${status === 'approved' ? 'approved' : status === 'rejected' ? 'disapproved' : 'updated'} successfully`,
+      data: transaction,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteTransaction = async (req, res, next) => {
   try {
     await financeService.deleteTransaction(req.params.id);
@@ -83,6 +101,7 @@ module.exports = {
   getTransactionById,
   createTransaction,
   updateTransaction,
+  updateTransactionStatus,
   deleteTransaction,
   getFinanceSummary,
 };

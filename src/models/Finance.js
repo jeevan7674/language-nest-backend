@@ -30,8 +30,8 @@ const financeSchema = new mongoose.Schema(
     },
     paymentMode: {
       type: String,
-      enum: ['online', 'offline', 'cash', 'bank_transfer', 'upi', 'other'],
-      default: 'online',
+      trim: true,
+      default: 'UPI',
     },
     event: {
       type: String,
@@ -52,6 +52,36 @@ const financeSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    paidBy: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    notes: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+      index: true,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',
@@ -68,7 +98,7 @@ const financeSchema = new mongoose.Schema(
   }
 );
 
-financeSchema.index({ title: 'text', category: 'text', reference: 'text' });
+financeSchema.index({ title: 'text', category: 'text', reference: 'text', paidBy: 'text' });
 
 const Finance = mongoose.model('Finance', financeSchema);
 
